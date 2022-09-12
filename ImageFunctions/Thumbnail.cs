@@ -70,6 +70,9 @@ namespace ImageFunctions
             return encoder;
         }
 
+        private static void ResizeImage([EventGridTrigger]EventGridEvent eventGridEvent, [Blob("{data.url}", FileAccess.Read)] Stream input) {
+        }
+
         [FunctionName("Thumbnail")]
         public static async Task Run(
             [EventGridTrigger]EventGridEvent eventGridEvent,
@@ -83,8 +86,9 @@ namespace ImageFunctions
                     var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var extension = Path.GetExtension(createdEvent.Url);
                     var encoder = GetEncoder(extension);
+                    log.LogInformation($"URL is: {createdEvent.Url}");
 
-                    if (encoder != null)
+                    if (encoder != null && createdEvent.Url.Contains("full/"))
                     {
                         var thumbnailWidth = Convert.ToInt32(Environment.GetEnvironmentVariable("THUMBNAIL_WIDTH"));
                         var thumbContainerName = Environment.GetEnvironmentVariable("THUMBNAIL_CONTAINER_NAME");
@@ -101,7 +105,7 @@ namespace ImageFunctions
                             image.Mutate(x => x.Resize(thumbnailWidth, height));
                             image.Save(output, encoder);
                             output.Position = 0;
-                            await blobContainerClient.UploadBlobAsync(blobName, output);
+                            await blobContainerClient.UploadBlobAsync("/"+thumbnailWidth+"/"+blobName, output);
                         }
                     }
                     else
