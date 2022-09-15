@@ -70,17 +70,7 @@ namespace ImageFunctions
             return encoder;
         }
 
-        private static void ResizeImage([EventGridTrigger]EventGridEvent eventGridEvent, [Blob("{data.url}", FileAccess.Read)] Stream input) {
-        }
-
-        [FunctionName("Thumbnail")]
-        public static async Task Run(
-            [EventGridTrigger]EventGridEvent eventGridEvent,
-            [Blob("{data.url}", FileAccess.Read)] Stream input,
-            ILogger log)
-        {
-            try
-            {
+        private static void ResizeImage(int size, [EventGridTrigger]EventGridEvent eventGridEvent, [Blob("{data.url}", FileAccess.Read)] Stream input, ILogger log) {
                 if (input != null)
                 {
                     var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
@@ -88,9 +78,9 @@ namespace ImageFunctions
                     var encoder = GetEncoder(extension);
                     log.LogInformation($"URL is: {createdEvent.Url}");
 
-                    if (encoder != null && createdEvent.Url.Contains("full/"))
+                    if (encoder != null && createdEvent.Url.Contains("covers/full/"))
                     {
-                        var thumbnailWidth = Convert.ToInt32(Environment.GetEnvironmentVariable("THUMBNAIL_WIDTH"));
+                        var thumbnailWidth = size;
                         var thumbContainerName = Environment.GetEnvironmentVariable("THUMBNAIL_CONTAINER_NAME");
                         var blobServiceClient = new BlobServiceClient(BLOB_STORAGE_CONNECTION_STRING);
                         var blobContainerClient = blobServiceClient.GetBlobContainerClient(thumbContainerName);
@@ -105,7 +95,7 @@ namespace ImageFunctions
                             image.Mutate(x => x.Resize(thumbnailWidth, height));
                             image.Save(output, encoder);
                             output.Position = 0;
-                            await blobContainerClient.UploadBlobAsync("/"+thumbnailWidth+"/"+blobName, output);
+                            await blobContainerClient.UploadBlobAsync(thumbnailWidth+"/"+blobName, output);
                         }
                     }
                     else
@@ -113,6 +103,18 @@ namespace ImageFunctions
                         log.LogInformation($"No encoder support for: {createdEvent.Url}");
                     }
                 }
+        }
+
+        [FunctionName("Thumbnail")]
+        public static async Task Run(
+            [EventGridTrigger]EventGridEvent eventGridEvent,
+            [Blob("{data.url}", FileAccess.Read)] Stream input,
+            ILogger log)
+        {
+            try
+            {
+                ResizeImage(128, eventGridEvent, input, log);
+                ResizeImage(512, eventGridEvent, input, log);
             }
             catch (Exception ex)
             {
