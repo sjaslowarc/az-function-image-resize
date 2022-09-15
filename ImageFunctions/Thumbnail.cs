@@ -73,6 +73,7 @@ namespace ImageFunctions
         private static void ResizeImage(int size, [EventGridTrigger]EventGridEvent eventGridEvent, [Blob("{data.url}", FileAccess.Read)] Stream input, ILogger log) {
                 if (input != null)
                 {
+                return;
                     var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var extension = Path.GetExtension(createdEvent.Url);
                     var encoder = GetEncoder(extension);
