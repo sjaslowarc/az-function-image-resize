@@ -81,7 +81,7 @@ namespace ImageFunctions
                         return;
                     }
 
-                    if (encoder != null && createdEvent.Url.Contains("covers/full/"))
+                    if (encoder != null)
                     {
                         log.LogInformation($"Resizing: {createdEvent.Url} x {size}");
                         var thumbnailWidth = size;
