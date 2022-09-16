@@ -76,17 +76,19 @@ namespace ImageFunctions
                     var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var extension = Path.GetExtension(createdEvent.Url);
                     var encoder = GetEncoder(extension);
-                    log.LogInformation($"URL is: {createdEvent.Url}");
+
+                    if (false == createdEvent.Url.Contains("covers/full")) {
+                        return;
+                    }
 
                     if (encoder != null && createdEvent.Url.Contains("covers/full/"))
                     {
+                        log.LogInformation($"Resizing: {createdEvent.Url} x {size}");
                         var thumbnailWidth = size;
                         var thumbContainerName = Environment.GetEnvironmentVariable("THUMBNAIL_CONTAINER_NAME");
                         var blobServiceClient = new BlobServiceClient(BLOB_STORAGE_CONNECTION_STRING);
                         var blobContainerClient = blobServiceClient.GetBlobContainerClient(thumbContainerName);
-                        var blobName = GetBlobNameFromUrl(createdEvent.Url);
-                        log.LogInformation($"Blob name is: {blobName}");
-                        return;
+                		string fileName = System.IO.Path.GetFileName(createdEvent.Url);
 
                         using (var output = new MemoryStream())
                         using (Image<Rgba32> image = Image.Load(input))
@@ -97,7 +99,7 @@ namespace ImageFunctions
                             image.Mutate(x => x.Resize(thumbnailWidth, height));
                             image.Save(output, encoder);
                             output.Position = 0;
-                            await blobContainerClient.UploadBlobAsync(thumbnailWidth+"/"+blobName, output);
+                            await blobContainerClient.UploadBlobAsync(thumbnailWidth+"/"+fileName, output);
                         }
                     }
                     else
